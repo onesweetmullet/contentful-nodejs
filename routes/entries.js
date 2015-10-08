@@ -4,12 +4,33 @@ var DateTimeManager = require("../workflow/dateTimeManager");
 var HttpManager = require("../workflow/httpManager");
 var http = require("http");
 
-var _maxAge = 24 * 60 * 60 * 1000; // currently set for one day
+ var _maxAge = 24 * 60 * 60 * 1000; // currently set for one day
+//var _maxAge = 1000;
 
 var _spaceId = "";
 var _entryId = "";
 var _apiKey = "";
 var _res = {};
+
+var _options = {};
+exports.init = function(_host, _proxyHost, _proxyPort) {	 
+	if (!_proxyHost && !_proxyPort) {
+		// no proxy specified
+		_options = {
+			host: _host			
+		};
+	}
+	else {
+		// proxy specified
+		_options = {
+			host: _proxyHost,
+			port: _proxyPort,
+			headers: {
+				Host: _host
+			}
+		};	
+	}
+};
 
 exports.index = function(req, res) {
 	ContentfulEntry.find({}, function(err, docs) {
@@ -44,23 +65,22 @@ exports.getSpecificEntry = function(req, res) {
 	if (_forceRefresh) {
 		beginGetFromWebService(_spaceId, _entryId, _apiKey, endGetFromWebService);
 	} else {
-		beginGetFromDatabase(endGetFromDatabase);
-		//DBManager.read(res, _spaceId, _entryId, endGetFromDatabase);	
+		beginReadFromDatabase(endReadFromDatabase);	
 	}
 };
 
-var beginGetFromDatabase = function(callback) {
+var beginReadFromDatabase = function(callback) {
 	DBManager.read(_spaceId, _entryId, callback);
 };
 
-var endGetFromDatabase = function(_response) {
+var endReadFromDatabase = function(_response) {
 	if (!_response.entry) {
 		// entry could not be found
 		// attempt to get from webservice
 		beginGetFromWebService(_spaceId, _entryId, _apiKey, endGetFromWebService);
 	} else {
 		// entry was found
-		if (DateTimeManager.isContentExpired(_response.entry._doc.createdAt, _maxAge)) {
+		if (DateTimeManager.isContentExpired(_response.entry._doc.contentfulDateCreated, _maxAge)) {
 			// expired
 			beginGetFromWebService(_spaceId, _entryId, _apiKey, endGetFromWebService);
 		} else {
@@ -73,28 +93,9 @@ var endGetFromDatabase = function(_response) {
 var beginGetFromWebService = function(spaceId, entryId, apiKey, callback) {
 	//HttpManager.httpRequest(spaceId, entryId, apiKey)
 	var _path = "/spaces/" + spaceId + "/entries/" + entryId + "?access_token=" + apiKey;
-	
-	var options = {};
-	// if (!proxyHost && !proxyPort) {
-		// no proxy specified
-		options = {
-			host: "cdn.contentful.com",
-			path: _path,			
-		};
-	// }
-	// else {
-	// 	// proxy specified
-	// 	options = {
-	// 		host: proxyHost,
-	// 		port: proxyPort,
-	// 		path: _path,
-	// 		headers: {
-	// 			Host: 'cdn.contentful.com'
-	// 		}
-	// 	};	
-	// }
-	
-	http.request(options, callback).end();		
+	_options.path = _path;
+		
+	http.request(_options, callback).end();		
 };
 
 var endGetFromWebService = function(res, _response) {
@@ -109,21 +110,20 @@ var endGetFromWebService = function(res, _response) {
 		
 		var _json = JSON.parse(str);
 		
+		// do we already have this id in the database?
+		// no, we don't. add it.
+		beginSaveToDatabase(_json, endSaveToDatabase);
 	});
 };
 
-var beginCreateToDatabase = function(data, callback) {
-	
-};
+var beginSaveToDatabase = function(data, callback) {
+	DBManager.save(data, callback);
+}
 
-var endCreateToDatabase = function(response, callback) {
-	
-};
-
-var beginUpdateToDatabase = function(data, callback) {
-	
-};
-
-var endUpdateToDatabase = function(response, callback) {
-	
-};
+var endSaveToDatabase = function(data, callback) {
+	if (data.entry) {
+		_res.json(200, { entry: data.entry });
+	} else {
+		_res.json(403, { message: data.message });
+	}
+}

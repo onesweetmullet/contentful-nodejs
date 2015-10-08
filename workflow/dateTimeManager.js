@@ -1,5 +1,5 @@
 exports.isContentExpired = function(contentDate, maxAge) {
-	var _dateDiff = new Date() - contentDate;
+	var _dateDiff = Date.now() - contentDate;
 	
 	// check if it is expired
 	if (_dateDiff < maxAge) {
