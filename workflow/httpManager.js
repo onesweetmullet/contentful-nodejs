@@ -12,7 +12,7 @@ var callback = function(response) {
 		console.log(str);
 		
 		var _json = JSON.parse(str);
-		dbManager.saveToDb(_json);
+		dbManager.create(_json);
 	});
 };
 

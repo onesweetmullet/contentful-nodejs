@@ -23,9 +23,10 @@ app.set('view engine', 'jade');
 
 
 // with proxy
-httpManager.httpRequest('uxjqeewlg87p', '1ragifE9PWi4E6gCyGKkQM', '2beee684812f522670e9aeed83f28348dffafe57f72061c59642b46ca2e2f056', "US_Proxy_Indy.xh1.lilly.com", 9000);
+// httpManager.httpRequest('uxjqeewlg87p', '1ragifE9PWi4E6gCyGKkQM', '2beee684812f522670e9aeed83f28348dffafe57f72061c59642b46ca2e2f056', "US_Proxy_Indy.xh1.lilly.com", 9000);
 
 app.get('/entries', entries.index);
+app.get('/entries/:spaceId/:entryId/:apiKey/:forceRefresh', entries.getSpecificEntry);
 
 // no proxy
 // httpManager.httpRequest('uxjqeewlg87p', '1ragifE9PWi4E6gCyGKkQM', '2beee684812f522670e9aeed83f28348dffafe57f72061c59642b46ca2e2f056');
